@@ -18,8 +18,16 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "chrome-extension://ajagbhbjlennihehkdeoapelhfbjhjdl"
+  ],
+  credentials: true,
+}));
+
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
 // // Serve static files correctly (for Linux / Render)

@@ -5,21 +5,23 @@ export default function Admin() {
   const [notes, setNotes] = useState([]);
   const [token, setToken] = useState("");
 
-  const API = "http://localhost:3000";
+  const API = "https://your-backend.onrender.com"; 
 
   useEffect(() => {
-    chrome.storage.local.get(["jwt"]).then((res) => {
-      const jwt = res.jwt;
-      setToken(jwt);
-      fetchData(jwt);
-    });
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.get(["jwt"]).then((res) => {
+        const jwt = res.jwt;
+        setToken(jwt);
+        fetchData(jwt);
+      });
+    }
   }, []);
 
   const fetchData = async (jwt) => {
-    const userRes = await fetch(`${API}/admin/users`, {
+    const userRes = await fetch(`${API}/api/admin/users`, {
       headers: { Authorization: `Bearer ${jwt}` },
     });
-    const noteRes = await fetch(`${API}/admin/notes`, {
+    const noteRes = await fetch(`${API}/api/admin/notes`, {
       headers: { Authorization: `Bearer ${jwt}` },
     });
     const userData = await userRes.json();
@@ -29,7 +31,7 @@ export default function Admin() {
   };
 
   const deleteUser = async (id) => {
-    await fetch(`${API}/admin/user/${id}`, {
+    await fetch(`${API}/api/admin/user/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -37,7 +39,7 @@ export default function Admin() {
   };
 
   const deleteNote = async (id) => {
-    await fetch(`${API}/admin/note/${id}`, {
+    await fetch(`${API}/api/admin/note/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

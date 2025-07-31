@@ -11,7 +11,7 @@ function Popup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const API = "http://localhost:5000"; // Change to your deployed API URL
+  const API = "https://your-backend.onrender.com";  // Change to your deployed API URL
 
   useEffect(() => {
     chrome.storage.local.get(["jwt"]).then((res) => {
@@ -28,23 +28,40 @@ function Popup() {
     });
   }, []);
 
-  const handleAuth = async () => {
-    const endpoint = authMode === "signup" ? "/signup" : "/login";
+ const handleAuth = async () => {
+  const endpoint = authMode === "signup" ? "/api/user/signup" : "/api/user/login";
+
+  try {
     const res = await fetch(`${API}${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+
     const data = await res.json();
+
     if (data.token) {
+      console.log(`✅ ${authMode === "signup" ? "Signed up" : "Logged in"} successfully`);
+
       setToken(data.token);
       chrome.storage.local.set({ jwt: data.token });
+
+      // Clear inputs
+      setEmail("");
+      setPassword("");
+
       fetchNotes(data.token);
+    } else {
+      console.error("❌ Auth failed:", data.error || "Unknown error");
     }
-  };
+  } catch (err) {
+    console.error("❌ Auth error:", err);
+  }
+};
+
 
   const handleSave = async () => {
-    await fetch(`${API}/notes`, {
+    await fetch(`${API}/api/notes/notes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -60,7 +77,7 @@ function Popup() {
   };
 
   const fetchNotes = async (jwt) => {
-    const res = await fetch(`${API}/notes`, {
+    const res = await fetch(`${API}/api/notes/notes`, {
       headers: { Authorization: `Bearer ${jwt}` },
     });
     const data = await res.json();

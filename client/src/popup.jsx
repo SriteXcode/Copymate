@@ -1,120 +1,159 @@
-import React, { useEffect, useState } from "react";
-import "./index.css";
+import React, { useState } from "react";
 
-function Popup() {
-  const [text, setText] = useState("");
-  const [tag, setTag] = useState("");
-  const [notes, setNotes] = useState([]);
-  const [token, setToken] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [authMode, setAuthMode] = useState("login"); // or 'signup'
+const API = "https://your-backend.onrender.com";  // Change to your deployed API URL
+ // 🔁 Change this to your deployed backend URL
+
+export default function Popup() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
 
-  const API = "https://your-backend.onrender.com";  // Change to your deployed API URL
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    console.log("🔐 Attempting login:", { email, password });
 
-  useEffect(() => {
-    chrome.storage.local.get(["jwt"]).then((res) => {
-      if (res.jwt) {
-        setToken(res.jwt);
-        fetchNotes(res.jwt);
-      }
-    });
-
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      chrome.tabs.sendMessage(tab.id, { action: "getSelectedText" }, (res) => {
-        if (res?.text) setText(res.text);
+    try {
+      const res = await fetch(`${API}/api/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
-    });
-  }, []);
 
- const handleAuth = async () => {
-  const endpoint = authMode === "signup" ? "/api/user/signup" : "/api/user/login";
+      const data = await res.json();
+      console.log("✅ Login response:", data);
 
-  try {
-    const res = await fetch(`${API}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+      if (res.ok) {
+        const token = data.token;
+        await chrome.storage.local.set({ jwt: token });
+        console.log("🔑 Token saved to chrome.storage:", token);
+        setLoggedIn(true);
 
-    const data = await res.json();
-
-    if (data.token) {
-      console.log(`✅ ${authMode === "signup" ? "Signed up" : "Logged in"} successfully`);
-
-      setToken(data.token);
-      chrome.storage.local.set({ jwt: data.token });
-
-      // Clear inputs
-      setEmail("");
-      setPassword("");
-
-      fetchNotes(data.token);
-    } else {
-      console.error("❌ Auth failed:", data.error || "Unknown error");
+        // Clear fields
+        setEmail("");
+        setPassword("");
+      } else {
+        console.error("❌ Login failed:", data.message || "Unknown error");
+      }
+    } catch (err) {
+      console.error("🚨 Login error:", err);
     }
-  } catch (err) {
-    console.error("❌ Auth error:", err);
-  }
-};
-
-
-  const handleSave = async () => {
-    await fetch(`${API}/api/notes/notes`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ content: text, tag }),
-    });
-    setSaved(true);
-    setText("");
-    setTag("");
-    fetchNotes(token);
-    setTimeout(() => setSaved(false), 2000);
   };
 
-  const fetchNotes = async (jwt) => {
-    const res = await fetch(`${API}/api/notes/notes`, {
-      headers: { Authorization: `Bearer ${jwt}` },
-    });
-    const data = await res.json();
-    setNotes(data.notes || []);
-  };
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    console.log("📝 Attempting signup:", { name, email, password });
 
-  if (!token) {
-    return (
-      <div className="popup-container">
-        <h2>SweetSave++ 💖</h2>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-        <button onClick={handleAuth}>{authMode === "signup" ? "Sign Up" : "Log In"}</button>
-        <p style={{ cursor: "pointer" }} onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")}>
-          {authMode === "signup" ? "Already have an account?" : "Create an account"}
-        </p>
-      </div>
-    );
-  }
+    try {
+      const res = await fetch(`${API}/api/users/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+      console.log("✅ Signup response:", data);
+
+      if (res.ok) {
+        const token = data.token;
+        await chrome.storage.local.set({ jwt: token });
+        console.log("🔑 Token saved to chrome.storage:", token);
+        setLoggedIn(true);
+
+        // Clear fields
+        setName("");
+        setEmail("");
+        setPassword("");
+      } else {
+        console.error("❌ Signup failed:", data.message || "Unknown error");
+      }
+    } catch (err) {
+      console.error("🚨 Signup error:", err);
+    }
+  };
 
   return (
-    <div className="popup-container">
-      <h2>SweetSave++ 💾</h2>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Selected text here..." />
-      <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="#Tag" />
-      <button onClick={handleSave}>Save</button>
-      {saved && <p className="saved-msg">Saved! 💖</p>}
-      <h3>Recent Notes</h3>
-      <ul>
-        {notes.map((n, i) => (
-          <li key={i}>
-            {n.content} <em>({n.tag})</em>
-          </li>
-        ))}
-      </ul>
+    <div style={{ padding: "1rem", fontFamily: "Arial", width: "250px" }}>
+      {loggedIn ? (
+        <h3>🎉 You're logged in!</h3>
+      ) : (
+        <>
+          <h2>{isLogin ? "Login" : "Signup"}</h2>
+          <form onSubmit={isLogin ? handleLogin : handleSignup}>
+            {!isLogin && (
+              <input
+                type="text"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                style={{
+                  display: "block",
+                  width: "100%",
+                  marginBottom: "0.5rem",
+                  padding: "0.4rem",
+                }}
+              />
+            )}
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{
+                display: "block",
+                width: "100%",
+                marginBottom: "0.5rem",
+                padding: "0.4rem",
+              }}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{
+                display: "block",
+                width: "100%",
+                marginBottom: "0.5rem",
+                padding: "0.4rem",
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                width: "100%",
+                padding: "0.5rem",
+                backgroundColor: "#6a5acd",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              {isLogin ? "Login" : "Signup"}
+            </button>
+          </form>
+
+          <p style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            {isLogin ? "New user?" : "Already have an account?"}{" "}
+            <button
+              onClick={() => setIsLogin(!isLogin)}
+              style={{
+                color: "#6a5acd",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              {isLogin ? "Signup here" : "Login here"}
+            </button>
+          </p>
+        </>
+      )}
     </div>
   );
 }
-
-export default Popup;

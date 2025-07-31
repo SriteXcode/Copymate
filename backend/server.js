@@ -22,23 +22,19 @@ const __dirname = dirname(__filename);
 app.use(cors());
 app.use(express.json());
 
-// Serve static files correctly (for Linux / Render)
+// // Serve static files correctly (for Linux / Render)
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Fallback route for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // Test route
 app.get('/', (req, res) => {
   res.send('Hello, world! 🌍');
 });
 
-// API Routes
+// // API Routes
 app.use('/api/user', userRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/admin', adminRoutes);
+
 
 // Connect DB and Start server
 mongoose.connect(process.env.MONGO_URI, {
